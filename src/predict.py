@@ -31,7 +31,7 @@ class AttackPredictor:
     def load_all_artifacts(self):
         """Load all model and preprocessing artifacts."""
         try:
-            model_path = os.path.join(self.model_dir, 'attack_detector.pkl')
+            model_path = os.path.join(self.model_dir, 'random_forest.pkl')
             scaler_path = os.path.join(self.model_dir, 'scaler.pkl')
             encoders_path = os.path.join(self.model_dir, 'encoders.pkl')
 
@@ -40,8 +40,12 @@ class AttackPredictor:
             self.encoders = joblib.load(encoders_path)
 
             logger.info("All model artifacts loaded successfully")
+            logger.info(f"  Model: {model_path}")
+            logger.info(f"  Scaler: {scaler_path}")
+            logger.info(f"  Encoders: {encoders_path}")
         except FileNotFoundError as e:
             logger.error(f"Model artifacts not found: {e}")
+            logger.error("Please train the model first: python -m src.train")
             raise
 
     def preprocess_features(self, features_dict):

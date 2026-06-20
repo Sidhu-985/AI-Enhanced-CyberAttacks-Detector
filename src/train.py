@@ -33,7 +33,7 @@ class ModelTrainer:
 
     def train_random_forest(self, X_train, y_train, n_estimators=100, max_depth=20):
         """
-        Train Random Forest classifier.
+        Train Random Forest classifier with balanced class weights.
 
         Args:
             X_train: Training features
@@ -45,10 +45,12 @@ class ModelTrainer:
             RandomForestClassifier: Trained model
         """
         logger.info(f"Training Random Forest with {n_estimators} estimators...")
+        logger.info(f"  Config: max_depth={max_depth}, class_weight=balanced, n_jobs=-1")
 
         self.model = RandomForestClassifier(
             n_estimators=n_estimators,
             max_depth=max_depth,
+            class_weight='balanced',
             random_state=self.random_state,
             n_jobs=-1,
             verbose=1
@@ -76,12 +78,12 @@ class ModelTrainer:
         metrics = evaluate_model(y_test, y_pred)
         return metrics
 
-    def save_model(self, model_name='attack_detector.pkl'):
+    def save_model(self, model_name='random_forest.pkl'):
         """
         Save trained model to disk.
 
         Args:
-            model_name: Filename for the model
+            model_name: Filename for the model (default: random_forest.pkl)
         """
         if self.model is None:
             raise ValueError("No model to save")
@@ -89,6 +91,7 @@ class ModelTrainer:
         model_path = os.path.join(self.model_dir, model_name)
         joblib.dump(self.model, model_path)
         logger.info(f"Model saved to {model_path}")
+        return model_path
 
     def save_preprocessing_artifacts(self, scaler, encoders):
         """
@@ -152,17 +155,41 @@ class ModelTrainer:
         }
 
 
-def train_full_pipeline(dataset_path):
+def train_full_pipeline(dataset_path, max_rows=100000, label_column='Label'):
     """
     Complete training pipeline from raw data to saved model.
 
     Args:
         dataset_path: Path to CSV dataset
+        max_rows: Maximum rows to load (100000 for initial training)
+        label_column: Name of label column
     """
-    logger.info("Starting full training pipeline...")
+    logger.info("="*60)
+    logger.info("CYBER ATTACK DETECTION - ML TRAINING PIPELINE")
+    logger.info("="*60)
+    logger.info(f"Dataset: {dataset_path}")
+    logger.info(f"Max Rows: {max_rows:,}")
+    logger.info(f"Label Column: {label_column}")
+    logger.info("="*60)
+
+    # Load dataset with row limit
+    logger.info("\n[1/4] Loading and preprocessing dataset...")
+    import pandas as pd
+    df = pd.read_csv(dataset_path, nrows=max_rows)
+    logger.info(f"Loaded {len(df):,} rows from dataset")
 
     # Preprocessing
-    preprocessed = preprocess_pipeline(dataset_path)
+    preprocessed = preprocess_pipeline(
+        dataset_path,
+        label_column=label_column,
+        binary=True,
+        normal_label='BENIGN'
+    )
+
+    logger.info("\n[2/4] Training Random Forest Classifier...")
+    logger.info(f"Training samples: {len(preprocessed['X_train']):,}")
+    logger.info(f"Testing samples: {len(preprocessed['X_test']):,}")
+    logger.info(f"Features: {len(preprocessed['feature_names'])}")
 
     # Training
     trainer = ModelTrainer()
@@ -173,30 +200,72 @@ def train_full_pipeline(dataset_path):
         max_depth=20
     )
 
-    # Evaluation
+    logger.info("\n[3/4] Evaluating model performance...")
     metrics = trainer.evaluate(preprocessed['X_test'], preprocessed['y_test'])
-    logger.info(f"Model Metrics: {metrics}")
+
+    # Print detailed metrics
+    print("\n" + "="*60)
+    print("MODEL EVALUATION RESULTS")
+    print("="*60)
+    print(f"Accuracy:  {metrics['accuracy']:.4f} ({metrics['accuracy']*100:.2f}%)")
+    print(f"Precision: {metrics['precision']:.4f}")
+    print(f"Recall:    {metrics['recall']:.4f}")
+    print(f"F1-Score:  {metrics['f1']:.4f}")
+    print("="*60)
+
+    # Confusion Matrix
+    from sklearn.metrics import confusion_matrix
+    y_pred = trainer.model.predict(preprocessed['X_test'])
+    cm = confusion_matrix(preprocessed['y_test'], y_pred)
+    tn, fp, fn, tp = cm.ravel()
+
+    print("\nCONFUSION MATRIX:")
+    print(f"  True Negatives (Normal):  {tn:,}")
+    print(f"  False Positives:          {fp:,}")
+    print(f"  False Negatives:          {fn:,}")
+    print(f"  True Positives (Attack):  {tp:,}")
+    print("="*60)
+
+    logger.info("\n[4/4] Saving model artifacts...")
 
     # Save artifacts
-    trainer.save_model()
+    trainer.save_model('random_forest.pkl')
     trainer.save_preprocessing_artifacts(preprocessed['scaler'], preprocessed['encoders'])
+    logger.info(f"Model saved to: models/random_forest.pkl")
+    logger.info(f"Scaler saved to: models/scaler.pkl")
+    logger.info(f"Encoders saved to: models/encoders.pkl")
 
-    logger.info("Training pipeline completed successfully")
+    logger.info("\n" + "="*60)
+    logger.info("TRAINING COMPLETED SUCCESSFULLY ✓")
+    logger.info("="*60)
+
     return trainer, metrics
 
 
 if __name__ == '__main__':
-    # Example usage
+    # Example usage - Train on CICIDS2017 cleaned dataset
     logging.basicConfig(level=logging.INFO)
-    dataset_path = 'data/cicids2017_sample.csv'
 
-    if os.path.exists(dataset_path):
-        trainer, metrics = train_full_pipeline(dataset_path)
-        print("\n" + "="*50)
-        print("TRAINING COMPLETED SUCCESSFULLY")
-        print("="*50)
-        for key, value in metrics.items():
-            print(f"{key}: {value:.4f}")
+    dataset_path = 'data/cicids2017_cleaned.csv'
+
+    # Check if dataset exists
+    if not os.path.exists(dataset_path):
+        print(f"\n❌ Dataset not found at {dataset_path}")
+        print("Please download CICIDS2017 dataset from Kaggle:")
+        print("  https://www.kaggle.com/datasets/cicdataset/cicids2017")
+        print("\nOr download and place it in the data/ folder as 'cicids2017_cleaned.csv'")
+        print("\nAlternatively, create a sample dataset:")
+        print("  python data_loader.py")
     else:
-        print(f"Dataset not found at {dataset_path}")
-        print("Please download CICIDS2017 dataset and place it in the data folder")
+        try:
+            trainer, metrics = train_full_pipeline(
+                dataset_path,
+                max_rows=100000,
+                label_column='Label'
+            )
+            print(f"\n✓ Model trained successfully!")
+            print(f"✓ Metrics saved and model ready for predictions")
+        except Exception as e:
+            print(f"\n❌ Training failed: {e}")
+            import traceback
+            traceback.print_exc()

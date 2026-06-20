@@ -135,30 +135,63 @@ def train_test_split_data(X, y, test_size=0.2, random_state=42):
     return X_train, X_test, y_train, y_test
 
 
-def preprocess_pipeline(filepath, label_column='Label', test_size=0.2):
+def convert_to_binary_labels(y, normal_label='BENIGN'):
     """
-    Complete preprocessing pipeline.
+    Convert multiclass labels to binary (Normal=0, Attack=1).
+
+    Args:
+        y: Original labels
+        normal_label: Label representing normal traffic
+
+    Returns:
+        np.ndarray: Binary encoded labels
+    """
+    binary_labels = (y != normal_label).astype(int)
+    logger.info(f"Converted to binary classification:")
+    logger.info(f"  Normal (0): {(binary_labels == 0).sum()} samples")
+    logger.info(f"  Attack (1): {(binary_labels == 1).sum()} samples")
+    return binary_labels
+
+
+def preprocess_pipeline(filepath, label_column='Label', test_size=0.2, binary=True, normal_label='BENIGN'):
+    """
+    Complete preprocessing pipeline for CICIDS2017 dataset.
 
     Args:
         filepath: Path to CSV file
         label_column: Name of label column
         test_size: Proportion of test set
+        binary: Convert to binary classification (Normal vs Attack)
+        normal_label: Label representing normal traffic
 
     Returns:
         dict: Preprocessing results and artifacts
     """
     logger.info("Starting preprocessing pipeline...")
+    logger.info(f"Loading dataset from: {filepath}")
 
     # Load and clean
     df = load_dataset(filepath)
+    initial_shape = df.shape
     df = remove_missing_values(df)
+    logger.info(f"Shape after cleaning: {initial_shape} -> {df.shape}")
 
     # Separate features and labels
+    if label_column not in df.columns:
+        raise ValueError(f"Label column '{label_column}' not found in dataset. Available: {df.columns.tolist()}")
+
     X = df.drop(columns=[label_column])
     y = df[label_column]
 
-    # Encode labels and categorical features
-    y_encoded = LabelEncoder().fit_transform(y)
+    logger.info(f"Original label distribution:\n{y.value_counts()}")
+
+    # Convert to binary classification if requested
+    if binary:
+        y_encoded = convert_to_binary_labels(y, normal_label)
+    else:
+        y_encoded = LabelEncoder().fit_transform(y)
+
+    # Encode categorical features
     X, encoders = encode_categorical_features(X)
 
     # Train-test split
@@ -170,6 +203,11 @@ def preprocess_pipeline(filepath, label_column='Label', test_size=0.2):
     X_train_scaled, X_test_scaled, scaler = scale_features(X_train, X_test)
 
     logger.info("Preprocessing pipeline completed successfully")
+    logger.info(f"Final dataset shapes:")
+    logger.info(f"  X_train: {X_train_scaled.shape}")
+    logger.info(f"  X_test: {X_test_scaled.shape}")
+    logger.info(f"  y_train distribution: {np.bincount(y_train)}")
+    logger.info(f"  y_test distribution: {np.bincount(y_test)}")
 
     return {
         'X_train': X_train_scaled,
@@ -179,4 +217,5 @@ def preprocess_pipeline(filepath, label_column='Label', test_size=0.2):
         'feature_names': X.columns.tolist(),
         'scaler': scaler,
         'encoders': encoders,
+        'label_mapping': {0: 'Normal', 1: 'Attack'},
     }
