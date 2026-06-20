@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Attack Detection Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>🛡️ Cyber Attack Detection System</h1>
+            <p class="subtitle">AI-Enhanced Network Threat Detection</p>
+        </header>
+
+        <!-- System Status -->
+        <section class="status-section">
+            <div class="status-card">
+                <h2>System Status</h2>
+                <div class="status-indicator" id="statusIndicator">
+                    <span class="status-dot" id="statusDot"></span>
+                    <span id="statusText">Checking...</span>
+                </div>
+                <p id="statusMessage" class="status-message"></p>
+            </div>
+        </section>
+
+        <!-- Prediction Input -->
+        <section class="input-section">
+            <div class="prediction-card">
+                <h2>Network Traffic Analysis</h2>
+                <form id="predictionForm">
+                    <div class="form-group">
+                        <label for="flowDuration">Flow Duration (ms):</label>
+                        <input type="number" id="flowDuration" name="flowDuration" value="100000" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="totalFwdPackets">Total Forward Packets:</label>
+                        <input type="number" id="totalFwdPackets" name="totalFwdPackets" value="50" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="totalBwdPackets">Total Backward Packets:</label>
+                        <input type="number" id="totalBwdPackets" name="totalBwdPackets" value="30" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="totalLenFwdPackets">Total Length Forward Packets:</label>
+                        <input type="number" id="totalLenFwdPackets" name="totalLenFwdPackets" value="5000" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="totalLenBwdPackets">Total Length Backward Packets:</label>
+                        <input type="number" id="totalLenBwdPackets" name="totalLenBwdPackets" value="3000" required>
+                    </div>
+
+                    <button type="submit" class="btn-submit">Analyze Traffic</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Prediction Results -->
+        <section class="results-section" id="resultsSection" style="display: none;">
+            <div class="result-card">
+                <h2>Analysis Results</h2>
+
+                <!-- Prediction Result -->
+                <div class="result-box" id="resultBox">
+                    <h3>Detection Result</h3>
+                    <div class="prediction-result" id="predictionResult">
+                        <span id="resultLabel" class="result-label">Loading...</span>
+                        <span id="resultIcon" class="result-icon">⏳</span>
+                    </div>
+                </div>
+
+                <!-- Confidence -->
+                <div class="confidence-section">
+                    <h3>Model Confidence</h3>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" id="confidenceFill"></div>
+                    </div>
+                    <p class="confidence-value"><span id="confidenceValue">0%</span></p>
+                </div>
+
+                <!-- Attack Probability -->
+                <div class="probability-section">
+                    <h3>Attack Probability</h3>
+                    <div class="probability-display" id="probabilityDisplay">
+                        <span id="probabilityValue">0%</span>
+                    </div>
+                </div>
+
+                <!-- Message -->
+                <div class="message-box" id="messageBox">
+                    <p id="resultMessage" class="result-message">Waiting for analysis...</p>
+                </div>
+
+                <!-- Details -->
+                <div class="details-section">
+                    <h3>Classification Details</h3>
+                    <div class="details-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Prediction Class:</span>
+                            <span id="predictionClass" class="detail-value">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Is Attack:</span>
+                            <span id="isAttack" class="detail-value">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Timestamp:</span>
+                            <span id="timestamp" class="detail-value">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Error Message -->
+        <div class="error-container" id="errorContainer" style="display: none;">
+            <div class="error-message" id="errorMessage"></div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div class="loading-container" id="loadingContainer" style="display: none;">
+            <div class="spinner"></div>
+            <p>Analyzing network traffic...</p>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2024 Cyber Attack Detection System | AI-Enhanced Network Security</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
